@@ -17,6 +17,8 @@ public class Auto extends OpMode {
 
     private int pathState;
 
+    private FlywheelLogic shooter = new FlywheelLogic();
+    private boolean shotsTriggered = false;
 
     private final Pose startPose = new Pose(28.5, 128, Math.toRadians(180)); // Start Pose of our robot.
     private final Pose scorePose = new Pose(60, 85, Math.toRadians(135)); // Scoring Pose of our robot. It is facing the goal at a 135 degree angle.
@@ -87,15 +89,20 @@ public class Auto extends OpMode {
             - Time: "if(pathTimer.getElapsedTimeSeconds() > 1) {}"
             - Robot Position: "if(follower.getPose().getX() > 36) {}"
             */
-
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
-                if (!follower.isBusy() && pathTimer.getElapsedTimeSeconds() > 5) {
-                    /* Score Preload */
-
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
+                if (!shotsTriggered) {
+                    shooter.fireShots(3);
+                    shotsTriggered = true;
+                }
+                else if (shotsTriggered && !shooter.isBusy()) {
                     follower.followPath(grabPickup1, true);
                     setPathState(2);
                 }
+                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
+                    /* Score Preload */
+
+                    /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
+
+
                 break;
             case 2:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup1Pose's position */
@@ -163,6 +170,8 @@ public class Auto extends OpMode {
     public void setPathState(int pState) {
         pathState = pState;
         pathTimer.resetTimer();
+
+        shotsTriggered = false;
     }
 
 
@@ -174,6 +183,7 @@ public class Auto extends OpMode {
 
         // These loop the movements of the robot, these must be called continuously in order to work
         follower.update();
+        shooter.update();
         autonomousPathUpdate();
 
         // Feedback to Driver Hub for debugging
@@ -193,10 +203,13 @@ public class Auto extends OpMode {
         opmodeTimer = new Timer();
         opmodeTimer.resetTimer();
 
+        shooter.init(hardwareMap);
 
         follower = Constants.createFollower(hardwareMap);
         buildPaths();
         follower.setStartingPose(startPose);
+
+
 
     }
 
