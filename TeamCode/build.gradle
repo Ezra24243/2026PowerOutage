@@ -20,6 +20,20 @@ android {
 
     packagingOptions {
         jniLibs.useLegacyPackaging true
+
+        compileOptions {
+            sourceCompatibility JavaVersion.VERSION_11
+            targetCompatibility JavaVersion.VERSION_11
+        }
+
+        // Add this toolchain block
+
+
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(11)
+            }
+        }
     }
 }
 
