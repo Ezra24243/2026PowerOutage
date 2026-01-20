@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
-
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.telemetry.TelemetryManager;
@@ -20,7 +20,6 @@ import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
@@ -99,6 +98,8 @@ public class Teleop extends OpMode {
 
     @Override
     public void loop() {
+
+        rhino.setPower(0.5);
         //Call this once per loop
         follower.update();
         telemetryM.update();

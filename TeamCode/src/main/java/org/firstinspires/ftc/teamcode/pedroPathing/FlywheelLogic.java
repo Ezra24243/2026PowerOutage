@@ -12,8 +12,8 @@ import com.qualcomm.robotcore.hardware.DcMotorControllerEx;
 
 
 public class FlywheelLogic {
-    private DcMotorEx rhino;
-    private Servo flipper;
+    public DcMotorEx rhino;
+    public Servo flipper;
 
     private ElapsedTime stateTimer = new ElapsedTime();
 

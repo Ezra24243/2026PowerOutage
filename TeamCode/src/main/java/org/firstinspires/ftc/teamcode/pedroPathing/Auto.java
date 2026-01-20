@@ -8,167 +8,249 @@ import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 @Autonomous(name = "Example Auto", group = "Examples")
 public class Auto extends OpMode {
 
     private Follower follower;
     private Timer pathTimer, actionTimer, opmodeTimer;
+    private DcMotorEx intake;
 
-    private int pathState;
 
+    //----------------FKYWHEEL SETUP--------------------
     private FlywheelLogic shooter = new FlywheelLogic();
     private boolean shotsTriggered = false;
 
-    private final Pose startPose = new Pose(28.5, 128, Math.toRadians(180)); // Start Pose of our robot.
-    private final Pose scorePose = new Pose(60, 85, Math.toRadians(135)); // Scoring Pose of our robot. It is facing the goal at a 135 degree angle.
-    private final Pose pickup1Pose = new Pose(37, 121, Math.toRadians(0)); // Highest (First Set) of Artifacts from the Spike Mark.
-    private final Pose pickup2Pose = new Pose(43, 130, Math.toRadians(0)); // Middle (Second Set) of Artifacts from the Spike Mark.
-    private final Pose pickup3Pose = new Pose(49, 135, Math.toRadians(0)); // Lowest (Third Set) of Artifacts from the Spike Mark.
+    private final Pose startPose = new Pose(21.42627345844504, 121.60857908847186, Math.toRadians(135)); // Start Pose of our robot.
+    private final Pose scorePose = new Pose(53.27613941018767, 90.14477211796246, Math.toRadians(135));
+    private final Pose highStart = new Pose(42.85254691689008, 83.96782841823057, Math.toRadians(180));
+    private final Pose highEnd = new Pose(16.986595174262735, 83.96782841823057, Math.toRadians(180));
+    private final Pose middleStart = new Pose(42.85254691689008, 60.03217158176943, Math.toRadians(180));
+    private final Pose middleEnd = new Pose(16.986595174262735, 60.03217158176943, Math.toRadians(180));
+    private final Pose lowStart = new Pose(42.85254691689008, 35.71045576407508, Math.toRadians(180));
+    private final Pose lowEnd = new Pose(16.986595174262735, 35.71045576407508, Math.toRadians(180));
+    private final Pose leavePose = new Pose(30,70,Math.toRadians(180));
 
+    private enum PathState {
+        SCORE_PRELOAD,
+        SHOOT_PRELOAD,
+        GET_TO_HIGH_START,
+        GRAB_HIGH,
+        SCORE_HIGH,
+        SHOOT_HIGH,
+        GET_TO_MIDDLE_START,
+        GRAB_MIDDLE,
+        SCORE_MIDDLE,
+        SHOOT_MIDDLE,
+        GET_TO_LOW_START,
+        GRAB_LOW,
+        SCORE_LOW,
+        SHOOT_LOW,
+        LEAVE_POINT
+    }
+
+    private PathState pathState;
 
     private Path scorePreload;
-    private PathChain grabPickup1, scorePickup1, grabPickup2, scorePickup2, grabPickup3, scorePickup3;
+    private PathChain getToHighStart, grabHigh, scoreHigh, getToMiddleStart, grabMiddle, scoreMiddle, getToLowStart, grabLow, scoreLow, leavePoint;
 
     public void buildPaths() {
         /* This is our scorePreload path. We are using a BezierLine, which is a straight line. */
         scorePreload = new Path(new BezierLine(startPose, scorePose));
         scorePreload.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
 
-    /* Here is an example for Constant Interpolation
-    scorePreload.setConstantInterpolation(startPose.getHeading()); */
 
-        /* This is our grabPickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        grabPickup1 = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose, pickup1Pose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), pickup1Pose.getHeading())
+        getToHighStart = follower.pathBuilder()
+                .addPath(new BezierLine(scorePose, highStart))
+                .setLinearHeadingInterpolation(scorePose.getHeading(), highStart.getHeading())
                 .build();
 
-        /* This is our scorePickup1 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        scorePickup1 = follower.pathBuilder()
-                .addPath(new BezierLine(pickup1Pose, scorePose))
-                .setLinearHeadingInterpolation(pickup1Pose.getHeading(), scorePose.getHeading())
+        grabHigh = follower.pathBuilder()
+                .addPath(new BezierLine(highStart, highEnd))
+                .setLinearHeadingInterpolation(highStart.getHeading(), highEnd.getHeading())
                 .build();
 
-        /* This is our grabPickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        grabPickup2 = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose, pickup2Pose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), pickup2Pose.getHeading())
+        scoreHigh = follower.pathBuilder()
+                .addPath(new BezierLine(highEnd, scorePose))
+                .setLinearHeadingInterpolation(highEnd.getHeading(), scorePose.getHeading())
                 .build();
 
-        /* This is our scorePickup2 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        scorePickup2 = follower.pathBuilder()
-                .addPath(new BezierLine(pickup2Pose, scorePose))
-                .setLinearHeadingInterpolation(pickup2Pose.getHeading(), scorePose.getHeading())
+        getToMiddleStart = follower.pathBuilder()
+                .addPath(new BezierLine(scorePose, middleStart))
+                .setLinearHeadingInterpolation(scorePose.getHeading(), middleStart.getHeading())
                 .build();
 
-        /* This is our grabPickup3 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        grabPickup3 = follower.pathBuilder()
-                .addPath(new BezierLine(scorePose, pickup3Pose))
-                .setLinearHeadingInterpolation(scorePose.getHeading(), pickup3Pose.getHeading())
+        grabMiddle = follower.pathBuilder()
+                .addPath(new BezierLine(middleStart, middleEnd))
+                .setLinearHeadingInterpolation(middleStart.getHeading(), middleEnd.getHeading())
                 .build();
 
-        /* This is our scorePickup3 PathChain. We are using a single path with a BezierLine, which is a straight line. */
-        scorePickup3 = follower.pathBuilder()
-                .addPath(new BezierLine(pickup3Pose, scorePose))
-                .setLinearHeadingInterpolation(pickup3Pose.getHeading(), scorePose.getHeading())
+        scoreMiddle = follower.pathBuilder()
+                .addPath(new BezierLine(middleEnd, scorePose))
+                .setLinearHeadingInterpolation(middleEnd.getHeading(), scorePose.getHeading())
+                .build();
+
+        getToLowStart = follower.pathBuilder()
+                .addPath(new BezierLine(scorePose, lowStart))
+                .setLinearHeadingInterpolation(scorePose.getHeading(), lowStart.getHeading())
+                .build();
+
+        grabLow = follower.pathBuilder()
+                .addPath(new BezierLine(lowStart, lowEnd))
+                .setLinearHeadingInterpolation(lowStart.getHeading(), lowEnd.getHeading())
+                .build();
+
+        scoreLow = follower.pathBuilder()
+                .addPath(new BezierLine(lowEnd, scorePose))
+                .setLinearHeadingInterpolation(lowEnd.getHeading(), scorePose.getHeading())
+                .build();
+
+        leavePoint = follower.pathBuilder()
+                .addPath(new BezierLine(scorePose, leavePose))
+                .setLinearHeadingInterpolation(scorePose.getHeading(), leavePose.getHeading())
                 .build();
     }
 
 
     public void autonomousPathUpdate() {
         switch (pathState) {
-            case 0:
+            case SCORE_PRELOAD:
                 follower.followPath(scorePreload);
-                setPathState(1);
+                setPathState(PathState.SHOOT_PRELOAD);
                 break;
-            case 1:
+            case SHOOT_PRELOAD:
 
-            /* You could check for
-            - Follower State: "if(!follower.isBusy()) {}"
-            - Time: "if(pathTimer.getElapsedTimeSeconds() > 1) {}"
-            - Robot Position: "if(follower.getPose().getX() > 36) {}"
-            */
-                if (!shotsTriggered) {
-                    shooter.fireShots(3);
-                    shotsTriggered = true;
+
+                if (!follower.isBusy()) {
+                    if (!shotsTriggered) {
+                        shooter.fireShots(3);
+                        shotsTriggered = true;
+                    }
+                    else if (shotsTriggered && !shooter.isBusy()) {
+                        follower.followPath(getToHighStart, true);
+                        shotsTriggered = false;
+                        intake.setPower(0.5);
+                        setPathState(PathState.GET_TO_HIGH_START);
+                    }
                 }
-                else if (shotsTriggered && !shooter.isBusy()) {
-                    follower.followPath(grabPickup1, true);
-                    setPathState(2);
-                }
-                /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
-                    /* Score Preload */
-
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-
 
                 break;
-            case 2:
+            case GET_TO_HIGH_START:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup1Pose's position */
                 if (!follower.isBusy()) {
-                    /* Grab Sample */
 
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(scorePickup1, true);
-                    setPathState(3);
+                    follower.followPath(grabHigh, true);
+                    setPathState(PathState.GRAB_HIGH);
                 }
                 break;
-            case 3:
+            case GRAB_HIGH:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
                 if (!follower.isBusy()) {
                     /* Score Sample */
+                    intake.setPower(0);
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(grabPickup2, true);
-                    setPathState(4);
+                    follower.followPath(scoreHigh, true);
+                    setPathState(PathState.SCORE_HIGH);
                 }
                 break;
-            case 4:
+            case SCORE_HIGH:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup2Pose's position */
                 if (!follower.isBusy()) {
-                    /* Grab Sample */
-
-                    /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(scorePickup2, true);
-                    setPathState(5);
+                    if (!shotsTriggered) {
+                        shooter.fireShots(3);
+                        shotsTriggered = true;
+                    }
+                    else if (shotsTriggered && !shooter.isBusy()) {
+                        follower.followPath(getToMiddleStart, true);
+                        shotsTriggered = false;
+                        intake.setPower(0.5);
+                        setPathState(PathState.GET_TO_MIDDLE_START);
+                    }
                 }
+
                 break;
-            case 5:
+            case GET_TO_MIDDLE_START:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
+
+
                 if (!follower.isBusy()) {
                     /* Score Sample */
 
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are grabbing the sample */
-                    follower.followPath(grabPickup3, true);
-                    setPathState(6);
+                    follower.followPath(grabMiddle, true);
+                    setPathState(PathState.GRAB_MIDDLE);
                 }
                 break;
-            case 6:
+            case GRAB_MIDDLE:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the pickup3Pose's position */
                 if (!follower.isBusy()) {
                     /* Grab Sample */
-
+                    intake.setPower(0);
                     /* Since this is a pathChain, we can have Pedro hold the end point while we are scoring the sample */
-                    follower.followPath(scorePickup3, true);
-                    setPathState(7);
+                    follower.followPath(scoreMiddle, true);
+                    setPathState(PathState.SCORE_MIDDLE);
                 }
                 break;
-            case 7:
+            case SCORE_MIDDLE:
                 /* This case checks the robot's position and will wait until the robot position is close (1 inch away) from the scorePose's position */
                 if (!follower.isBusy()) {
-                    /* Set the state to a Case we won't use or define, so it just stops running an new paths */
-                    setPathState(-1);
+                    if (!shotsTriggered) {
+                        shooter.fireShots(3);
+                        shotsTriggered = true;
+                    }
+                    else if (shotsTriggered && !shooter.isBusy()) {
+                        follower.followPath(getToLowStart, true);
+                        intake.setPower(0.5);
+                        shotsTriggered = false;
+                        setPathState(PathState.GET_TO_LOW_START);
+                    }
                 }
                 break;
+            case GET_TO_LOW_START:
+
+                if (!follower.isBusy()) {
+
+                    follower.followPath(grabLow, true);
+                    setPathState(PathState.GRAB_LOW);
+                }
+                break;
+            case GRAB_LOW:
+
+                if (!follower.isBusy()) {
+
+                    intake.setPower(0);
+
+                    follower.followPath(scoreLow, true);
+                    setPathState(PathState.SCORE_LOW);
+                }
+                break;
+            case SCORE_LOW:
+
+                if (!follower.isBusy()) {
+
+                    follower.followPath(leavePoint, true);
+                    setPathState(PathState.LEAVE_POINT);
+                }
+                break;
+            case LEAVE_POINT:
+
+                if (!follower.isBusy()) {
+                    telemetry.addLine("Peanut or Done");
+                }
+
+
+
+
         }
     }
 
     /**
      * These change the states of the paths and actions. It will also reset the timers of the individual switches
      **/
-    public void setPathState(int pState) {
-        pathState = pState;
+    public void setPathState(PathState newState) {
+        pathState = newState;
         pathTimer.resetTimer();
 
         shotsTriggered = false;
@@ -202,6 +284,7 @@ public class Auto extends OpMode {
         pathTimer = new Timer();
         opmodeTimer = new Timer();
         opmodeTimer.resetTimer();
+        intake = hardwareMap.get(DcMotorEx.class, "intake");
 
         shooter.init(hardwareMap);
 
@@ -227,7 +310,7 @@ public class Auto extends OpMode {
     @Override
     public void start() {
         opmodeTimer.resetTimer();
-        setPathState(0);
+        setPathState(PathState.SCORE_PRELOAD);
     }
 
 }
