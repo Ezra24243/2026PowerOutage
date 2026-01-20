@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+import org.firstinspires.ftc.teamcode.pedroPathing.Auto;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
@@ -17,9 +18,11 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+import org.firstinspires.ftc.teamcode.pedroPathing.FlywheelLogic;
 
 import com.qualcomm.robotcore.hardware.NormalizedColorSensor;
 import com.qualcomm.robotcore.hardware.NormalizedRGBA;
@@ -32,6 +35,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 @TeleOp
 public class Teleop extends OpMode {
 
+    private double flipperDown = 0.5;
+    private double flipperUp = 1;
     private Follower follower;
     public static Pose startingPose; //See ExampleAuto to understand how to use this
     private boolean automatedDrive;
@@ -39,16 +44,26 @@ public class Teleop extends OpMode {
     private Supplier<PathChain> shoot2;
     private Supplier<PathChain> park;
 
+    private FlywheelLogic shooter = new FlywheelLogic();
+    private boolean shotsTriggered = false;
+    private boolean intaking;
+
+
     private TelemetryManager telemetryM;
-    private DcMotor rhino;
-    private Servo flipper;
     private DcMotor bLeft;
     private DcMotor bRight;
     private DcMotor fLeft;
     private DcMotor fRight;
+    private DcMotor intake;
 
     @Override
     public void init() {
+
+
+
+        shooter.init(hardwareMap);
+        intake = hardwareMap.get(DcMotorEx.class, "intake");
+
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(startingPose == null ? new Pose() : startingPose);
         follower.update();
@@ -69,9 +84,10 @@ public class Teleop extends OpMode {
                 .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, Math.toRadians(0), 0.8))
                 .build();
 
+        intaking = true;
 
 
-        //arm.setPosition(0.35);
+
 
         telemetry.addLine("Peanut or Done");
         telemetry.update();
@@ -83,12 +99,12 @@ public class Teleop extends OpMode {
     @Override
     public void start() {
 
-        rhino = hardwareMap.dcMotor.get("rhino");
-        flipper = hardwareMap.servo.get("flipper");
+
         bLeft = hardwareMap.dcMotor.get("bLeft");
         bRight = hardwareMap.dcMotor.get("bRight");
         fLeft = hardwareMap.dcMotor.get("fLeft");
         fRight = hardwareMap.dcMotor.get("fRight");
+
 
         //The parameter controls whether the Follower should use break mode on the motors (using it is recommended).
         //In order to use float mode, add .useBrakeModeInTeleOp(true); to your Drivetrain Constants in Constant.java (for Mecanum)
@@ -99,10 +115,11 @@ public class Teleop extends OpMode {
     @Override
     public void loop() {
 
-        rhino.setPower(0.5);
         //Call this once per loop
         follower.update();
         telemetryM.update();
+        shooter.update();
+
 
 //DRIVER 1'S CONTROLLER
         if (!automatedDrive) follower.setTeleOpDrive(
@@ -139,6 +156,33 @@ public class Teleop extends OpMode {
 
 
 //DRIVER 2'S CONTROLLER
+
+        if (gamepad2.b) {
+            shotsTriggered = true;
+        }
+
+        if (shotsTriggered) {
+            shooter.fireShots(3);
+        }
+        if (shotsTriggered && (gamepad2.a || !shooter.isBusy())) {
+            shotsTriggered = false;
+        }
+
+
+       if (intaking) {
+           intake.setPower(0.5);
+       }
+       else {
+           intake.setPower(0);
+       }
+
+       if (intaking && gamepad2.right_bumper) {
+           intaking = false;
+       }
+
+       if (!intaking && gamepad2.right_bumper) {
+           intaking = true;
+       }
 
     }
 
