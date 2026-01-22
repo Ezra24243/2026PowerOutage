@@ -35,8 +35,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 @TeleOp
 public class Teleop extends OpMode {
 
-    private double flipperDown = 0.5;
-    private double flipperUp = 1;
+    private double flipperDown = 0;
+    private double flipperUp = 0.6;
     private Follower follower;
     public static Pose startingPose; //See ExampleAuto to understand how to use this
     private boolean automatedDrive;
@@ -55,6 +55,10 @@ public class Teleop extends OpMode {
     private DcMotor fLeft;
     private DcMotor fRight;
     private DcMotor intake;
+    private Servo flipper;
+    private boolean lastB = false;
+    private boolean lastA = false;
+    private boolean lastRB = false;
 
     @Override
     public void init() {
@@ -63,11 +67,12 @@ public class Teleop extends OpMode {
 
         shooter.init(hardwareMap);
         intake = hardwareMap.get(DcMotorEx.class, "intake");
+        flipper = hardwareMap.get(Servo.class, "flipper");
 
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(startingPose == null ? new Pose() : startingPose);
         follower.update();
-        telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
+//        telemetryM = PanelsTelemetry.INSTANCE.getTelemetry();
 
         shoot1 = () -> follower.pathBuilder() //Lazy Curve Generation
                 .addPath(new Path(new BezierLine(follower::getPose, new Pose(45, 98))))
@@ -117,7 +122,7 @@ public class Teleop extends OpMode {
 
         //Call this once per loop
         follower.update();
-        telemetryM.update();
+//        telemetryM.update();
         shooter.update();
 
 
@@ -136,6 +141,7 @@ public class Teleop extends OpMode {
         //Stop automated following if the follower is done
         if (automatedDrive && (gamepad1.right_bumper || !follower.isBusy())) {
             follower.startTeleopDrive();
+            flipper.setPosition(flipperDown);
             automatedDrive = false;
         }
 
@@ -150,39 +156,45 @@ public class Teleop extends OpMode {
         }
 
 
-        telemetryM.debug("position", follower.getPose());
-        telemetryM.debug("velocity", follower.getVelocity());
-        telemetryM.debug("automatedDrive", automatedDrive);
 
+        telemetry.addData("position", follower.getPose());
+        telemetry.addData("velocity", follower.getVelocity());
+        telemetry.addData("automatedDrive", automatedDrive);
 
 //DRIVER 2'S CONTROLLER
 
-        if (gamepad2.b) {
+        if (gamepad2.b && !lastB) {
             shotsTriggered = true;
-        }
-
-        if (shotsTriggered) {
             shooter.fireShots(3);
         }
-        if (shotsTriggered && (gamepad2.a || !shooter.isBusy())) {
+
+        if (gamepad2.a && !lastA) {
             shotsTriggered = false;
+            shooter.cancel();
         }
+
+        lastB = gamepad2.b;
+        lastA = gamepad2.a;
+        lastRB = gamepad2.right_bumper;
+
+       if (gamepad2.right_bumper && !lastRB) {
+           intaking = !intaking;
+       }
 
 
        if (intaking) {
-           intake.setPower(0.5);
+           intake.setPower(-0.2);
        }
        else {
            intake.setPower(0);
        }
 
-       if (intaking && gamepad2.right_bumper) {
-           intaking = false;
-       }
-
-       if (!intaking && gamepad2.right_bumper) {
-           intaking = true;
-       }
+       telemetry.addData("Shooter State", shooter.getState());
+       telemetry.addData("Shooter Busy", shooter.isBusy());
+       telemetry.addData("Intaking", intaking);
+       telemetry.addData("Flywheel Velocity", shooter.Lizard.getVelocity());
+       telemetry.addData("Shots Remaining", shooter.shotsRemaining);
+       telemetry.update();
 
     }
 

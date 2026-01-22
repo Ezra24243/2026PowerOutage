@@ -10,6 +10,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.teamcode.Teleop;
 import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
@@ -31,6 +32,7 @@ public class Auto extends OpMode {
     //----------------FKYWHEEL SETUP--------------------
     private FlywheelLogic shooter = new FlywheelLogic();
     private boolean shotsTriggered = false;
+    private double intakePower = -0.2;
 
     private final Pose startPose = new Pose(21.42627345844504, 121.60857908847186, Math.toRadians(135)); // Start Pose of our robot.
     private final Pose scorePose = new Pose(53.27613941018767, 90.14477211796246, Math.toRadians(135));
@@ -42,18 +44,18 @@ public class Auto extends OpMode {
     private final Pose lowEnd = new Pose(16.986595174262735, 35.71045576407508, Math.toRadians(180));
     private final Pose leavePose = new Pose(30,70,Math.toRadians(180));
 
-    private static final double FAST_VEL = 60;   // in/s (travel)
+    private static final double FAST_VEL = 30;   // in/s (travel)
 
     private static final double SLOW_VEL = 25;   // in/s (intaking / precision)
 
     // -------------- APRILTAG --------------
-    /* private boolean tagCorrectionEnabled = true;
+    private boolean tagCorrectionEnabled = true;
 
     private boolean tagIsValid = false;
     private Pose tagPose = null;
 
     private static final int BLUE_GOAL_TAG_ID = 5;
-    private static final Pose BLUE_GOAL_TAG_POSE = new Pose(72,144,Math.toRadians(180)); */
+    private static final Pose BLUE_GOAL_TAG_POSE = new Pose(72,144,Math.toRadians(180));
 
     private enum PathState {
         SCORE_PRELOAD,
@@ -145,17 +147,19 @@ public class Auto extends OpMode {
                 .setLinearHeadingInterpolation(scorePose.getHeading(), leavePose.getHeading())
                 .setVelocityConstraint(FAST_VEL)
                 .build();
+
     }
 
 
-    /* private void correctPoseWithAprilTag(Pose tagPose) {
+     private void correctPoseWithAprilTag(Pose tagPose) {
         Pose current = follower.getPose();
 
         double blendedX = 0.7 * current.getX() + 0.3 * tagPose.getX();
-        double blendedY = 0.7 * current.getY() + 0.3 * tagPose.getY();
+        double blendedY = 0.7 * current.getX() + 0.3 * tagPose.getY();
 
         double currentH = current.getHeading();
         double tagH = tagPose.getHeading();
+
 
         double delta = tagH - currentH;
         while (delta > Math.PI) delta -= 2 * Math.PI;
@@ -165,7 +169,6 @@ public class Auto extends OpMode {
 
         follower.setPose(new Pose(blendedX, blendedY, blendedHeading));
     }
-*/
 
 
     public void autonomousPathUpdate() {
@@ -191,7 +194,7 @@ public class Auto extends OpMode {
                     else if (shotsTriggered && !shooter.isBusy()) {
                         follower.followPath(getToHighStart, true);
                         shotsTriggered = false;
-                        intake.setPower(0.5);
+                        intake.setPower(intakePower);
                         setPathState(PathState.GET_TO_HIGH_START);
                     }
                 }
@@ -231,7 +234,7 @@ public class Auto extends OpMode {
                     else if (shotsTriggered && !shooter.isBusy()) {
                         follower.followPath(getToMiddleStart, true);
                         shotsTriggered = false;
-                        intake.setPower(0.5);
+                        intake.setPower(intakePower);
                         setPathState(PathState.GET_TO_MIDDLE_START);
                     }
                 }
@@ -271,7 +274,7 @@ public class Auto extends OpMode {
                     }
                     else if (shotsTriggered && !shooter.isBusy()) {
                         follower.followPath(getToLowStart, true);
-                        intake.setPower(0.5);
+                        intake.setPower(intakePower);
                         shotsTriggered = false;
                         setPathState(PathState.GET_TO_LOW_START);
                     }
@@ -310,6 +313,7 @@ public class Auto extends OpMode {
             case LEAVE_POINT:
 
                 if (!follower.isBusy()) {
+                    Teleop.startingPose = follower.getPose();
                     telemetry.addLine("Peanut or Done");
                 }
 
@@ -335,13 +339,14 @@ public class Auto extends OpMode {
      **/
     @Override
     public void loop() {
-        /* List<AprilTagDetection> detections = aprilTagPipeline.getLatestDetections();
+        //List<AprilTagDetection> detections = aprilTagPipeline.getLatestDetections();
 
 
         tagIsValid = false;      // reset
         tagPose = null;
 
         AprilTagDetection bestDetection = null;
+        /* April
 
         for (AprilTagDetection detection : detections) {
             if (detection.id == BLUE_GOAL_TAG_ID) {

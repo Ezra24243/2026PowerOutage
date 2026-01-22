@@ -5,19 +5,15 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorImplEx;
-import com.qualcomm.robotcore.hardware.DcMotorImpl;
-import com.qualcomm.robotcore.hardware.DcMotorControllerEx;
-
 
 
 public class FlywheelLogic {
-    public DcMotorEx rhino;
+    public DcMotorEx Lizard;
     public Servo flipper;
 
     private ElapsedTime stateTimer = new ElapsedTime();
 
-    private enum FlywheelState {
+    public enum FlywheelState {
         IDLE,
         WARMING_UP,
         FLIPPING,
@@ -28,67 +24,78 @@ public class FlywheelLogic {
 
     //----------------  FLYWHEEL CONSTANTS  ------------------
 
-    private int shotsRemaining = 0;
-    private double flywheelVelocity = 0;
-    private double MIN_FLYWHEEL_RPM = 800;
-    private double TARGET_FLYWHEEL_RPM = 1100;
-    private double FLYWHEEL_MAX_WARMUP_TIME = 3;
+    public int shotsRemaining = 0;
+    private static final double MIN_TPS = 4500;
+    private static final double TARGET_TPS = 5000;
+    private static final double MAX_WARMUP_TIME = 2.0;
+
 
 
     //----------------  FLIPPER CONSTANTS ----------------
 
-    private double FLIPPER_DOWN = 0;
-    private double FLIPPER_FLIPPED = 0.5;
-    private double DOWN_TIME = 1; //time for next ball to roll into position
-    private double UP_TIME = 1; //time for flipper to keep supporting lifted ball
+    private static final double FLIPPER_DOWN = 0.0;
+    private static final double FLIPPER_FLIPPED = 0.6;
+    private static final double DOWN_TIME = 0.5; //time for next ball to roll into position
+    private static final double UP_TIME = 0.25; //time for flipper to keep supporting lifted ball
 
 
     public void init(HardwareMap hwMap) {
-        rhino = hwMap.get(DcMotorEx.class, "rhino");
+        Lizard = hwMap.get(DcMotorEx.class, "Lizard");
         flipper = hwMap.get(Servo.class, "flipper");
 
         //tune PIDF
-        rhino.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        Lizard.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        Lizard.setVelocity(0);
 
         flywheelState = FlywheelState.IDLE;
         flipper.setPosition(FLIPPER_DOWN);
     }
 
     public void update() {
+
+        double rpm = Lizard.getVelocity();
+
         switch (flywheelState) {
+
             case IDLE:
-                if (shotsRemaining > 0) {
-                    flipper.setPosition(FLIPPER_DOWN);
-                    rhino.setVelocity(TARGET_FLYWHEEL_RPM);
-                    stateTimer.reset();
-                    flywheelState = FlywheelState.WARMING_UP;
-                }
-                else {
-                    rhino.setVelocity(0);
-                }
+                Lizard.setVelocity(0);
+                flipper.setPosition(FLIPPER_DOWN);
+//                if (shotsRemaining > 0) {
+//                    flipper.setPosition(FLIPPER_DOWN);
+//                    Lizard.setVelocity(TARGET_RPM);
+//                    stateTimer.reset();
+//                    flywheelState = FlywheelState.WARMING_UP;
+//                }
+//                else {
+//                    Lizard.setVelocity(0);
+//                }
                 break;
             case WARMING_UP:
-                if (flywheelVelocity > MIN_FLYWHEEL_RPM || stateTimer.seconds() > FLYWHEEL_MAX_WARMUP_TIME) {
-
+                Lizard.setVelocity(TARGET_TPS);
+                if (rpm > MIN_TPS || stateTimer.seconds() > MAX_WARMUP_TIME) {
+                    stateTimer.reset();
                     flywheelState = FlywheelState.FLIPPING;
                 }
                 break;
             case FLIPPING:
-                stateTimer.reset();
+
                 flipper.setPosition(FLIPPER_FLIPPED);
 
                 if (stateTimer.seconds() > UP_TIME) {
-                    shotsRemaining--;
                     flipper.setPosition(FLIPPER_DOWN);
                     stateTimer.reset();
+                    shotsRemaining--;
 
                     flywheelState = FlywheelState.CHECK;
                 }
                 break;
+
+
             case CHECK:
                 if (stateTimer.seconds() > DOWN_TIME) {
                     if (shotsRemaining > 0) {
                         stateTimer.reset();
+                        flipper.setPosition(FLIPPER_DOWN);
                         flywheelState = FlywheelState.FLIPPING;
                     }
 
@@ -101,12 +108,24 @@ public class FlywheelLogic {
         }
     }
     public void fireShots(int numberOfShots) {
-        if (flywheelState == FlywheelState.IDLE) {
+        if (flywheelState == FlywheelState.IDLE && numberOfShots > 0) {
             shotsRemaining = numberOfShots;
+            stateTimer.reset();
+            flywheelState = FlywheelState.WARMING_UP;
         }
     }
 
+   public void cancel() {
+        shotsRemaining = 0;
+        flywheelState = FlywheelState.IDLE;
+   }
+
     public boolean isBusy() {
+
         return flywheelState != FlywheelState.IDLE;
+    }
+
+    public String getState() {
+        return flywheelState.name();
     }
 }
