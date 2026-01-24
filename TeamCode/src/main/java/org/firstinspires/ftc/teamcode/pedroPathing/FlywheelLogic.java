@@ -27,7 +27,7 @@ public class FlywheelLogic {
     public int shotsRemaining = 0;
     private static final double MIN_TPS = 6500;
     private static final double TARGET_TPS = 7000;
-    private static final double MAX_WARMUP_TIME = 2.5;
+    private static final double MAX_WARMUP_TIME = 1.2;
 
 
 
@@ -35,7 +35,7 @@ public class FlywheelLogic {
 
     private static final double FLIPPER_DOWN = 0.6;
     private static final double FLIPPER_FLIPPED = 0;
-    private static final double DOWN_TIME = 1; //time for next ball to roll into position
+    private static final double DOWN_TIME = 0.75; //time for next ball to roll into position
     private static final double UP_TIME = 0.25; //time for flipper to keep supporting lifted ball
 
 

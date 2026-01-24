@@ -16,7 +16,7 @@ import java.util.function.Supplier;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
-
+import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.IMU;
@@ -119,6 +119,8 @@ public class Teleop extends OpMode {
         //In order to use float mode, add .useBrakeModeInTeleOp(true); to your Drivetrain Constants in Constant.java (for Mecanum)
         //If you don't pass anything in, it uses the default (false)
         follower.startTeleopDrive();
+
+//        automatedDrive = true;
     }
 
     @Override
@@ -137,6 +139,11 @@ public class Teleop extends OpMode {
              -gamepad1.right_stick_x,
             true // Robot Centric
             );
+
+//        if (!automatedDrive) {
+//            bRight.setPower(-gamepad1.right_stick_y);
+//            fLeft.setPower(-gamepad1.left_stick_y);
+//        }
         //Automated PathFollowing
         if (!automatedDrive && gamepad1.dpad_left && !lastLeft) {
             follower.followPath(shoot1.get());
