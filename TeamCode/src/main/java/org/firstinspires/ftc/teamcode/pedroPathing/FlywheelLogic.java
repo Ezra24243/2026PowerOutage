@@ -25,17 +25,17 @@ public class FlywheelLogic {
     //----------------  FLYWHEEL CONSTANTS  ------------------
 
     public int shotsRemaining = 0;
-    private static final double MIN_TPS = 4500;
-    private static final double TARGET_TPS = 5000;
-    private static final double MAX_WARMUP_TIME = 2.0;
+    private static final double MIN_TPS = 6500;
+    private static final double TARGET_TPS = 7000;
+    private static final double MAX_WARMUP_TIME = 2.5;
 
 
 
     //----------------  FLIPPER CONSTANTS ----------------
 
-    private static final double FLIPPER_DOWN = 0.0;
-    private static final double FLIPPER_FLIPPED = 0.6;
-    private static final double DOWN_TIME = 0.5; //time for next ball to roll into position
+    private static final double FLIPPER_DOWN = 0.6;
+    private static final double FLIPPER_FLIPPED = 0;
+    private static final double DOWN_TIME = 1; //time for next ball to roll into position
     private static final double UP_TIME = 0.25; //time for flipper to keep supporting lifted ball
 
 
@@ -96,7 +96,7 @@ public class FlywheelLogic {
                     if (shotsRemaining > 0) {
                         stateTimer.reset();
                         flipper.setPosition(FLIPPER_DOWN);
-                        flywheelState = FlywheelState.FLIPPING;
+                        flywheelState = FlywheelState.WARMING_UP;
                     }
 
                     else {

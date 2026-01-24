@@ -35,8 +35,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 @TeleOp
 public class Teleop extends OpMode {
 
-    private double flipperDown = 0;
-    private double flipperUp = 0.6;
+    private double flipperDown = 0.5;
+    private double flipperUp = 0.1;
     private Follower follower;
     public static Pose startingPose; //See ExampleAuto to understand how to use this
     private boolean automatedDrive;
@@ -56,9 +56,12 @@ public class Teleop extends OpMode {
     private DcMotor fRight;
     private DcMotor intake;
     private Servo flipper;
-    private boolean lastB = false;
-    private boolean lastA = false;
-    private boolean lastRB = false;
+    private boolean lastDown = false;
+    private boolean lastUp = false;
+    private boolean lastLB = false; //This is for gamepad1
+    private boolean lastDown1 = false;
+    private boolean lastUp1 = false;
+    private boolean lastLeft = false;
 
     @Override
     public void init() {
@@ -76,20 +79,21 @@ public class Teleop extends OpMode {
 
         shoot1 = () -> follower.pathBuilder() //Lazy Curve Generation
                 .addPath(new Path(new BezierLine(follower::getPose, new Pose(45, 98))))
-                .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, Math.toRadians(150), 0.8))
+                .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, Math.toRadians(150), 1))
+
                 .build();
 
         shoot2 = () -> follower.pathBuilder() //Lazy Curve Generation
                 .addPath(new Path(new BezierLine(follower::getPose, new Pose(45, 98))))
-                .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, Math.toRadians(150), 0.8))
+                .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, Math.toRadians(150), 1))
                 .build();
 
         park = () -> follower.pathBuilder()
                 .addPath( new Path(new BezierLine(follower::getPose, new Pose(38.5, 34))))
-                .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, Math.toRadians(0), 0.8))
+                .setHeadingInterpolation(HeadingInterpolator.linearFromPoint(follower::getHeading, Math.toRadians(0), 1))
                 .build();
 
-        intaking = true;
+        intaking = false;
 
 
 
@@ -134,26 +138,36 @@ public class Teleop extends OpMode {
             true // Robot Centric
             );
         //Automated PathFollowing
-        if (gamepad1.yWasPressed()) {
+        if (!automatedDrive && gamepad1.dpad_left && !lastLeft) {
             follower.followPath(shoot1.get());
             automatedDrive = true;
         }
+
         //Stop automated following if the follower is done
+
+
+        if (!automatedDrive && gamepad1.dpad_up && !lastUp1) {
+            follower.followPath(shoot2.get());
+            automatedDrive = true;
+        }
+
+        if (!automatedDrive && gamepad1.dpad_down && !lastDown1) {
+            follower.followPath(park.get());
+
+            automatedDrive = true;
+        }
+
+        lastLeft = gamepad1.dpad_left;
+        lastUp1 = gamepad1.dpad_up;
+        lastDown1 = gamepad1.dpad_down;
+
         if (automatedDrive && (gamepad1.right_bumper || !follower.isBusy())) {
             follower.startTeleopDrive();
             flipper.setPosition(flipperDown);
             automatedDrive = false;
         }
 
-        if (gamepad1.aWasPressed()) {
-            follower.followPath(shoot2.get());
-            automatedDrive = true;
-        }
 
-        if (gamepad1.bWasPressed()) {
-            follower.followPath(park.get());
-            automatedDrive = true;
-        }
 
 
 
@@ -163,27 +177,27 @@ public class Teleop extends OpMode {
 
 //DRIVER 2'S CONTROLLER
 
-        if (gamepad2.b && !lastB) {
+        if (gamepad2.dpad_down && !lastDown) {
             shotsTriggered = true;
             shooter.fireShots(3);
         }
 
-        if (gamepad2.a && !lastA) {
+        if (gamepad2.dpad_up && !lastUp) {
             shotsTriggered = false;
             shooter.cancel();
         }
 
-        lastB = gamepad2.b;
-        lastA = gamepad2.a;
-        lastRB = gamepad2.right_bumper;
+        lastDown = gamepad2.dpad_down;
+        lastUp = gamepad2.dpad_up;
 
-       if (gamepad2.right_bumper && !lastRB) {
+       if (gamepad1.left_bumper && !lastLB) {
            intaking = !intaking;
        }
+        lastLB = gamepad1.left_bumper;
 
 
-       if (intaking) {
-           intake.setPower(-0.2);
+        if (intaking) {
+           intake.setPower(-0.6);
        }
        else {
            intake.setPower(0);
